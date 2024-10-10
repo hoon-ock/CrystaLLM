@@ -6,7 +6,7 @@ import gzip
 from tqdm import tqdm
 import multiprocessing as mp
 from queue import Empty
-
+import pandas as pd
 # Calculate the absolute path to the 'crystallm' directory
 script_dir = os.path.dirname(os.path.abspath(__file__))  # Absolute dir the script is in
 crystallm_dir = os.path.abspath(os.path.join(script_dir, '..'))  # 'crystallm' is one level up
@@ -51,6 +51,7 @@ def augment_cif(progress_queue, task_queue, result_queue,
     while not task_queue.empty():
         try:
             id, cif_str = task_queue.get_nowait()
+            id = int(id)
         except Empty:
             break
 
@@ -116,27 +117,49 @@ if __name__ == "__main__":
         cifs = pickle.load(f)
     # load metadata file
     if meta_path:
-        with open(meta_path, "rb") as f:
-            meta = pickle.load(f)
-        id_to_ads_symbols = {k: meta[k]['ads_symbols'] for k in meta.keys()}
-        id_to_bulk_symbols = {k: meta[k]['bulk_symbols'] for k in meta.keys()}
-        id_to_miller_index = {k: meta[k]['miller_index'] for k in meta.keys()}
+        # with open(meta_path, "rb") as f:
+        #     meta = pickle.load(f)
+        meta = pd.read_pickle(meta_path)
+        
+    #     id_to_ads_symbols = {k: meta[k]['ads_symbols'] for k in meta.keys()}
+    #     id_to_bulk_symbols = {k: meta[k]['bulk_symbols'] for k in meta.keys()}
+    #     id_to_miller_index = {k: meta[k]['miller_index'] for k in meta.keys()}
         
         
-    else:
-        id_to_ads_symbols = None
-        id_to_bulk_symbols = None
-        id_to_miller_index = None    
-        
+    # else:
+    #     id_to_ads_symbols = None
+    #     id_to_bulk_symbols = None
+    #     id_to_miller_index = None    
+        # Initialize dictionaries
+        id_to_ads_symbols = {}
+        id_to_bulk_symbols = {}
+        id_to_miller_index = {}
+
+        # Process each row to populate dictionaries
+        for index, row in meta.iterrows():
+            text = row['text']
+            id_value = row['id']
+
+            ads_symbol = text.split('</s>')[0]
+            bulk_symbol = text.split('</s>')[1].split(' (')[0]
+            miller_index = '(' + text.split(' (')[1].split(')')[0] + ')'
+
+            id_to_ads_symbols[id_value] = ads_symbol
+            id_to_bulk_symbols[id_value] = bulk_symbol
+            id_to_miller_index[id_value] = miller_index
+            # breakpoint()
+        # breakpoint()
         
     #######################
-    #breakpoint()
+    # breakpoint()
+    # For debugging!!
     # num = 0
+    # # breakpoint()
     # #modified_cif = replace_data_formula_with_symbols(cifs[num][1], id_to_bulk_symbols[cifs[num][0]], id_to_ads_symbols[cifs[num][0]])
     # modified_cif = replace_data_formula_with_catberta_string(cifs[num][1], 
-    #                                                          id_to_ads_symbols[cifs[num][0]], 
-    #                                                          id_to_bulk_symbols[cifs[num][0]],
-    #                                                          id_to_miller_index[cifs[num][0]])
+    #                                                          id_to_ads_symbols[int(cifs[num][0])], 
+    #                                                          id_to_bulk_symbols[int(cifs[num][0])],
+    #                                                          id_to_miller_index[int(cifs[num][0])])
     # breakpoint()
     ########################
     manager = mp.Manager()

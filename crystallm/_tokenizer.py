@@ -43,7 +43,8 @@ KEYWORDS = [
     "_cell_formula_units_Z",
     "loop_",
     "data_",
-    "_miller_" # added to process miller index
+    "</s>" # to process catberta string
+    # "_miller_" # added to process miller index
 ]
 
 EXTENDED_KEYWORDS = [
